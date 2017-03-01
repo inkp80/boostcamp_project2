@@ -14,6 +14,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 
@@ -50,12 +51,13 @@ import io.realm.Sort;
         robotoCalendarView.markCircleImage1(calendar);
         */
 
-public class MainCalendarFragment extends Fragment implements RobotoCalendarView.RobotoCalendarListener {
+public class MainCalendarFragment extends android.support.v4.app.Fragment implements RobotoCalendarView.RobotoCalendarListener {
     Realm realm;
 
     public RecyclerView mScheduleRecyclerView;
     public RobotoCalendarView mRobotoCalendar;
     public RealmResults<ScheduleRealm> mSchedules;
+    ScheduleAdapter mScheduleAdapter;
 
 
     Calendar mToday;
@@ -64,13 +66,14 @@ public class MainCalendarFragment extends Fragment implements RobotoCalendarView
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         realm = Realm.getDefaultInstance();
 
         Date mTodayInDate = new Date();
 
         mToday = new GregorianCalendar();
         mToday.setTime(mTodayInDate);
-        Log.d("check week of day", String.valueOf(mToday.get(Calendar.DAY_OF_WEEK)));
+        //Log.d("check week of day", String.valueOf(mToday.get(Calendar.DAY_OF_WEEK)));
         mToday.set(Calendar.HOUR_OF_DAY, 0);
         mToday.set(Calendar.MINUTE, 0);
         mToday.set(Calendar.SECOND, 0);
@@ -105,6 +108,7 @@ public class MainCalendarFragment extends Fragment implements RobotoCalendarView
     @Override
     public void onResume() {
         super.onResume();
+        mScheduleAdapter.notifyDataSetChanged();
         mRobotoCalendar.updateView();
         makeCheckMarkOnDay();
     }
@@ -147,7 +151,7 @@ public class MainCalendarFragment extends Fragment implements RobotoCalendarView
         mSchedules = realm.where(ScheduleRealm.class).greaterThan("date_in_long", mToday.getTimeInMillis()).lessThan("date_in_long", mTomorrow.getTimeInMillis()).equalTo("week_of_day_repit", 0).or().equalTo(Utills.WEEKDAYS[mToday.get(Calendar.DAY_OF_WEEK)], true).findAll();
         mSchedules = mSchedules.sort("week_of_day_repit", Sort.DESCENDING, "date_in_long", Sort.ASCENDING);
 
-        ScheduleAdapter mScheduleAdapter = new ScheduleAdapter(getActivity(), mSchedules);
+        mScheduleAdapter = new ScheduleAdapter(getActivity(), mSchedules);
         mScheduleRecyclerView.hasFixedSize();
         mScheduleRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         mScheduleRecyclerView.setAdapter(mScheduleAdapter);
@@ -174,19 +178,19 @@ public class MainCalendarFragment extends Fragment implements RobotoCalendarView
 
     @Override
     public void onDayLongClick(Calendar daySelectedCalendar) {
-        Toast.makeText(getActivity(), "onDayLongClick: " + daySelectedCalendar.getTime(), Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getActivity(), "onDayLongClick: " + daySelectedCalendar.getTime(), Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onRightButtonClick() {
-        Toast.makeText(getActivity(), "onRightButtonClick!", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getActivity(), "onRightButtonClick!", Toast.LENGTH_SHORT).show();
         mToday.add(Calendar.MONTH, 1);
         makeCheckMarkOnDay();
     }
 
     @Override
     public void onLeftButtonClick() {
-        Toast.makeText(getActivity(), "onLeftButtonClick!", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getActivity(), "onLeftButtonClick!", Toast.LENGTH_SHORT).show();
 
         mToday.add(Calendar.MONTH, -1);
         makeCheckMarkOnDay();
@@ -200,12 +204,16 @@ public class MainCalendarFragment extends Fragment implements RobotoCalendarView
         Calendar marking_end_date = new GregorianCalendar();
         marking_end_date.setTimeInMillis(mToday.getTimeInMillis());
         marking_end_date.set(Calendar.DATE, marking_end_date.getActualMaximum(Calendar.DAY_OF_MONTH));
+        marking_end_date.set(Calendar.HOUR_OF_DAY, 23);
+        marking_end_date.set(Calendar.MINUTE,59);
 
-        RealmResults<ScheduleRealm> mListOfMonth = realm.where(ScheduleRealm.class).greaterThanOrEqualTo("date_in_long", marking_start_date.getTimeInMillis()).lessThan("date_in_long", marking_end_date.getTimeInMillis()).findAll();
+
+        RealmResults<ScheduleRealm> mListOfMonth = realm.where(ScheduleRealm.class).greaterThanOrEqualTo("date_in_long", marking_start_date.getTimeInMillis()).lessThanOrEqualTo("date_in_long", marking_end_date.getTimeInMillis()).findAll();
 
         Calendar marking = new GregorianCalendar();
 
         for(int i=0; i<mListOfMonth.size(); i++) {
+            Log.d("date", String.valueOf(mListOfMonth.get(i).getDate()));
             if(mListOfMonth.get(i).getWeek_of_day_repit()!=0) continue;
             marking.setTimeInMillis(mListOfMonth.get(i).getDate_in_long());
             mRobotoCalendar.markCircleImage1(marking);
